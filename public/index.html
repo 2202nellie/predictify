@@ -87,7 +87,7 @@ ${ref?`<h2 style="font-size:22px"><span style="color:var(--g)">@${esc(ref)}</spa
 $('#u').oninput=e=>{ok=false;const v=e.target.value.trim();clearTimeout(tm);const h=$('#h');if(!v){h.textContent='';return}h.className='hint';h.textContent='checking…';
 tm=setTimeout(async()=>{try{const r=await api('check?u='+encodeURIComponent(v));ok=r.available;h.className='hint '+(ok?'ok':'no');h.textContent=ok?'@'+v+' is yours if you want it':(r.reason||'taken, try another')}catch(e){h.textContent='no connection'}},350)};
 $('#go').onclick=async()=>{const v=$('#u').value.trim();if(!ok){$('#u').classList.add('shake');setTimeout(()=>$('#u').classList.remove('shake'),400);buzz(40);return}
-try{const r=await api('register',{username:v});localStorage.pf_me=JSON.stringify(r);confetti();buzz([20,40,20]);boot()}catch(e){$('#h').className='hint no';$('#h').textContent=e.status==409?'someone just took that, try another':'something broke, try again'}}}
+try{const r=await api('register',{username:v});localStorage.pf_me=JSON.stringify(r);confetti();buzz([20,40,20]);boot()}catch(e){$('#h').className='hint no';$('#h').textContent=e.status==409?'someone just took that, try another':'something broke: '+e.message}}}
 
 async function boot(){const m=me();if(!m)return landing();
 try{if(ref&&ref.toLowerCase()!=m.username.toLowerCase()){await api('befriend',{friend:ref}).catch(()=>{});history.replaceState(null,'','/');await load();const f=S.friends.find(x=>x.username.toLowerCase()==ref.toLowerCase());return f?view(f):home()}
