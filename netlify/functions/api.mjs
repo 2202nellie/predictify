@@ -3,7 +3,9 @@ import { getStore } from "@netlify/blobs";
 const j = (d, s = 200) => new Response(JSON.stringify(d), { status: s, headers: { "content-type": "application/json", "x-developed-by": "clout" } });
 const k = (u) => String(u || "").trim().toLowerCase();
 const valid = (u) => /^[A-Za-z0-9_.]{3,16}$/.test(String(u || ""));
+const validPin = (p) => typeof p === "string" && p.length >= 4 && p.length <= 12;
 const sha = async (t) => [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(t)))].map((x) => x.toString(16).padStart(2, "0")).join("");
+const pinHash = (pin, user) => sha(pin + ":" + k(user));
 
 const handler = async (req) => {
   const st = getStore("predictify");
@@ -14,19 +16,34 @@ const handler = async (req) => {
   if (p === "check") {
     const u = url.searchParams.get("u");
     if (!valid(u)) return j({ available: false, reason: "3-16 letters, numbers, _ or ." });
-    return j({ available: !(await st.get("users/" + k(u))) });
+    const rec = await st.get("users/" + k(u), { type: "json" });
+    if (!rec) return j({ available: true });
+    return j({ available: false, exists: true, hasPin: !!rec.ph });
   }
 
   if (p === "register") {
-    if (!valid(body.username)) return j({ error: "invalid" }, 400);
+    if (!valid(body.username) || !validPin(body.pin)) return j({ error: "invalid" }, 400);
     const key = "users/" + k(body.username);
     if (await st.get(key)) return j({ error: "taken" }, 409);
-    const token = crypto.randomUUID();
-    const h = await sha(token);
-    await st.setJSON(key, { name: body.username.trim(), h }, { onlyIfNew: true });
+    const ph = await pinHash(body.pin, body.username);
+    await st.setJSON(key, { name: body.username.trim(), ph }, { onlyIfNew: true });
     const saved = await st.get(key, { type: "json" });
-    if (!saved || saved.h !== h) return j({ error: "taken" }, 409);
-    return j({ username: body.username.trim(), token });
+    if (!saved || saved.ph !== ph) return j({ error: "taken" }, 409);
+    return j({ username: saved.name, token: body.pin });
+  }
+
+  if (p === "login") {
+    if (!valid(body.username) || !validPin(body.pin)) return j({ error: "invalid" }, 400);
+    const key = "users/" + k(body.username);
+    const rec = await st.get(key, { type: "json" });
+    if (!rec) return j({ error: "nope" }, 404);
+    const ph = await pinHash(body.pin, body.username);
+    if (!rec.ph) {
+      await st.setJSON(key, { ...rec, ph });
+    } else if (rec.ph !== ph) {
+      return j({ error: "wrong pin" }, 401);
+    }
+    return j({ username: rec.name, token: body.pin });
   }
 
   const profile = async (u) => {
@@ -42,7 +59,8 @@ const handler = async (req) => {
 
   const user = req.headers.get("x-user"), tok = req.headers.get("x-token");
   const rec = user && tok ? await st.get("users/" + k(user), { type: "json" }) : null;
-  if (!rec || rec.h !== (await sha(tok))) return j({ error: "auth" }, 401);
+  const authed = rec && ((rec.ph && rec.ph === (await pinHash(tok, user))) || (rec.h && rec.h === (await sha(tok))));
+  if (!authed) return j({ error: "auth" }, 401);
   const me = k(user);
 
   if (p === "predictions" || p === "actuals") {
