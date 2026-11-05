@@ -123,10 +123,39 @@ tm=setTimeout(async()=>{try{const r=await api('check?u='+encodeURIComponent(nm))
 if(r.available){st='new';pw.style.display='';say('@'+nm+' is free. Set a PIN to claim it. You\'ll need it to log back in.','ok')}
 else if(r.exists){st=r.hasPin?'back':'claim';pw.style.display='';say(r.hasPin?'Welcome back @'+nm+'. Enter your PIN to continue.':'@'+nm+' has no PIN yet. If it\'s yours, set a PIN to claim it.','ok')}
 else say(r.reason||'try another','no')}catch(e){say('no connection','no')}},350)};
-$('#go').onclick=async()=>{const pin=pw.value;const bad=el=>{el.classList.add('shake');setTimeout(()=>el.classList.remove('shake'),400);buzz(40)};
-if(!st)return bad($('#u'));if(pin.length<4){say('PIN needs at least 4 characters','no');return bad(pw)}
-try{const r=await api(st=='new'?'register':'login',{username:nm,pin});localStorage.pf_me=JSON.stringify(r);confetti();buzz([20,40,20]);boot(true)}
-catch(e){say(e.status==401?'Wrong PIN. Try again.':e.status==409?'Someone just took that, try another':'something broke: '+e.message,'no');bad(pw)}}}
+$('#go').onclick=async()=>{
+	const pin = pw.value;
+	const bad = el => { el.classList.add('shake'); setTimeout(() => el.classList.remove('shake'), 400); buzz(40); };
+	if (!st) return bad($('#u'));
+	if (pin.length < 4) { say('PIN needs at least 4 characters', 'no'); return bad(pw); }
+		try {
+			const credentials = { username: nm, pin };
+			let r;
+			try {
+				r = await api(st == 'new' ? 'register' : 'login', credentials);
+			} catch (e) {
+				if (st != 'new' || (e.status != 409 && e.status != 503)) throw e;
+				for (let attempt = 0; attempt < 3; attempt++) {
+					if (attempt) await new Promise(resolve => setTimeout(resolve, attempt * 300));
+					try {
+						r = await api('login', credentials);
+						break;
+					} catch (loginError) {
+						if (loginError.status != 404) throw loginError;
+					}
+				}
+				if (!r) throw e;
+			}
+			localStorage.pf_me = JSON.stringify(r);
+			confetti();
+			buzz([20, 40, 20]);
+			boot(true);
+		} catch (e) {
+			say(e.status == 401 ? 'Wrong PIN. Try again.' : e.status == 409 ? 'Username is already taken. Try another.' : e.status == 503 ? 'Registration is taking longer than expected. Please try again.' : 'something broke: ' + e.message, 'no');
+			bad(pw);
+		}
+	}
+}
 
 async function boot(fresh){const m=me();if(!m)return landing();
 try{if(ref&&ref.toLowerCase()!=m.username.toLowerCase()){await api('befriend',{friend:ref}).catch(()=>{});history.replaceState(null,'','/');await load();const f=S.friends.find(x=>x.username.toLowerCase()==ref.toLowerCase());return f?view(f):home()}
@@ -186,4 +215,5 @@ document.addEventListener('pointerdown',e=>{const x=e.clientX,y=e.clientY,r=docu
 for(let i=0;i<12;i++){const s=document.createElement('span'),a=Math.PI*2*i/12+Math.random()*.5,d=44+Math.random()*56;s.className='spk';s.style.cssText=`left:${x}px;top:${y}px;background:${COL[i%6]};--dx:${Math.cos(a)*d}px;--dy:${Math.sin(a)*d}px`;document.body.append(s);setTimeout(()=>s.remove(),750)}});
 console.log("%cPredictify | developed by clout","font:900 16px sans-serif;color:#1ed760");
 boot();
-</script></body></html>
+</script></body>
+</html>
