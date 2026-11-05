@@ -151,12 +151,12 @@ if(q.type=='num'){const v=a[q.id]??q.def;a[q.id]=v;inp=`<div class="num" id="nv"
 A.innerHTML=`<div class="story" style="background:${c}"><div class="in"><div class="bars">${Q.map((_,k)=>`<i class="${k<=i?'on':''}"></i>`).join('')}</div><button class="x" id="x"><i class="ti ti-x"></i></button>
 <div class="mid"><div class="em"><i class="ti ti-${q.e}"></i></div><div style="font-weight:700">${mode=='pred'?'Predict':'What really happened'}</div><h2 class="big">${q.t}</h2>${inp}</div>
 <div class="nav"><button class="btn w" id="bk"><i class="ti ti-arrow-left"></i></button><button class="btn k" id="nx">${i==Q.length-1?'Lock it in':'Next'}</button></div></div></div>`;
-$('#x').onclick=home;$('#bk').onclick=()=>{if(i){i--;draw()}};
+$('#x').onclick=home;$('#bk').onclick=()=>{if(i){i--;draw()}else home()};
 if(q.type=='text')$('#in').oninput=e=>a[q.id]=e.target.value.trim();
-if(q.type=='top5')A.querySelectorAll('.t5in input').forEach(e=>e.oninput=()=>{const v=[0,1,2,3,4].map(k=>L(a[q.id])[k]||'');v[e.dataset.k]=e.target.value.trim();a[q.id]=v});
+if(q.type=='top5')A.querySelectorAll('.t5in input').forEach(e=>e.oninput=()=>{const v=[0,1,2,3,4].map(k=>L(a[q.id])[k]||'');v[e.dataset.k]=e.value.trim();a[q.id]=v});
 if(q.type=='pick')A.querySelectorAll('.chip').forEach(e=>e.onclick=()=>{a[q.id]=e.dataset.o;buzz();A.querySelectorAll('.chip').forEach(x=>x.classList.toggle('s',x==e))});
 if(q.type=='num')$('#rg').oninput=e=>{a[q.id]=+e.target.value;$('#nv').textContent=(+e.target.value).toLocaleString();buzz(4)};
-$('#nx').onclick=async()=>{if(q.type=='top5'?L(a[q.id]).filter(Boolean).length<5:!a[q.id]){if(q.type=='top5')toast('Fill all 5 spots');const t=$('.mid');t.classList.add('shake');setTimeout(()=>t.classList.remove('shake'),400);buzz(40);return}
+$('#nx').onclick=async()=>{if(q.type=='top5')a[q.id]=[...A.querySelectorAll('.t5in input')].map(x=>x.value.trim());if(q.type=='top5'?L(a[q.id]).filter(Boolean).length<5:!a[q.id]){if(q.type=='top5')toast('Fill all 5 spots');const t=$('.mid');t.classList.add('shake');setTimeout(()=>t.classList.remove('shake'),400);buzz(40);return}
 if(i<Q.length-1){i++;buzz();return draw()}
 $('#nx').textContent='Saving…';try{await api(mode=='pred'?'predictions':'actuals',{answers:a},'PUT');await load();confetti();buzz([30,50,30]);mode=='pred'?done():board()}catch(e){toast('Save failed, try again');$('#nx').textContent='Lock it in'}}};draw()}
 
@@ -170,7 +170,7 @@ else if(i<=Q.length){const q=Q[i-1],v=fa[q.id],y=mine[q.id],m=same(q,y,v);
 body=`<div class="mid"><div class="em"><i class="ti ti-${q.e}"></i></div><div style="font-weight:700">${q.t}</div>${q.type=='top5'?`<ol class="t5">${L(v).map((x,k)=>`<li style="animation-delay:${k*120}ms"><b>${k+1}</b>${esc(x)}</li>`).join('')}</ol>`:`<div class="ans">${esc(fmt(q,v))}</div>`}${y!=null?`<div class="you ${m?'match':''}">${m?(q.type=='top5'?'3+ of your picks overlap. Twins.':'You picked the same. Twins.'):'You said '+esc(fmt(q,y))}</div>`:''}</div>`}
 else body=`<div class="mid"><div class="em"><i class="ti ti-${twin>=5?'heart-handshake':twin>=3?'users':'swords'}"></i></div><h2 class="big">${S.pred?`${twin}/${Q.length} matches`:'Your turn'}</h2><div>${S.pred?(twin>=5?'You two are basically the same person.':twin>=3?'Good taste overlap.':'Wildly different. Wrapped day will be fun.'):'Make your own predictions so you can face off.'}</div></div>`;
 A.innerHTML=`<div class="story" style="background:${c}"><div class="in"><div class="bars">${Array.from({length:N},(_,k)=>`<i class="${k<=i?'on':''}"></i>`).join('')}</div><button class="x" id="x"><i class="ti ti-x"></i></button>${body}<div class="nav"><button class="btn w" id="bk"><i class="ti ti-arrow-left"></i></button><button class="btn k" id="nx">${i==N-1?(S.pred?'Back home':'Make mine'):'Next'}</button></div></div></div>`;
-$('#x').onclick=home;$('#bk').onclick=()=>{if(i){i--;draw()}};
+$('#x').onclick=home;$('#bk').onclick=()=>{if(i){i--;draw()}else home()};
 $('#nx').onclick=()=>{if(i<N-1){i++;buzz();draw()}else{i==N-1&&twin>=5&&confetti();S.pred?home():play('pred')}};if(i==N-1&&twin>=5)confetti()};draw()}
 
 function board(){const m=me();const all=[{u:m.username,p:S.pred,a:S.actual,me:1},...S.friends.map(f=>({u:f.username,p:f.pred,a:f.actual}))].filter(x=>x.p&&x.a).map(x=>({...x,s:score(x.p,x.a)})).sort((a,b)=>b.s-a.s);
