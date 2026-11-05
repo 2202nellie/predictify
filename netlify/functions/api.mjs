@@ -1,0 +1,70 @@
+import { getStore } from "@netlify/blobs";
+
+const j = (d, s = 200) => new Response(JSON.stringify(d), { status: s, headers: { "content-type": "application/json", "x-developed-by": "clout" } });
+const k = (u) => String(u || "").trim().toLowerCase();
+const valid = (u) => /^[A-Za-z0-9_.]{3,16}$/.test(String(u || ""));
+const sha = async (t) => [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(t)))].map((x) => x.toString(16).padStart(2, "0")).join("");
+
+export default async (req) => {
+  const st = getStore("predictify");
+  const url = new URL(req.url);
+  const p = url.pathname.replace(/^\/api\//, "");
+  const body = req.method === "GET" ? {} : await req.json().catch(() => ({}));
+
+  if (p === "check") {
+    const u = url.searchParams.get("u");
+    if (!valid(u)) return j({ available: false, reason: "3-16 letters, numbers, _ or ." });
+    return j({ available: !(await st.get("users/" + k(u))) });
+  }
+
+  if (p === "register") {
+    if (!valid(body.username)) return j({ error: "invalid" }, 400);
+    const token = crypto.randomUUID();
+    const r = await st.setJSON("users/" + k(body.username), { name: body.username.trim(), h: await sha(token) }, { onlyIfNew: true });
+    if (!r.modified) return j({ error: "taken" }, 409);
+    return j({ username: body.username.trim(), token });
+  }
+
+  const profile = async (u) => {
+    const rec = await st.get("users/" + k(u), { type: "json" });
+    if (!rec) return null;
+    return { username: rec.name, pred: await st.get("preds/" + k(u), { type: "json" }), actual: await st.get("actuals/" + k(u), { type: "json" }) };
+  };
+
+  if (p === "profile") {
+    const d = await profile(url.searchParams.get("u"));
+    return d ? j(d) : j({ error: "nope" }, 404);
+  }
+
+  const user = req.headers.get("x-user"), tok = req.headers.get("x-token");
+  const rec = user && tok ? await st.get("users/" + k(user), { type: "json" }) : null;
+  if (!rec || rec.h !== (await sha(tok))) return j({ error: "auth" }, 401);
+  const me = k(user);
+
+  if (p === "predictions" || p === "actuals") {
+    const a = body.answers;
+    if (!a || typeof a !== "object") return j({ error: "bad" }, 400);
+    await st.setJSON((p === "predictions" ? "preds/" : "actuals/") + me, { answers: a, at: Date.now() });
+    return j({ ok: true });
+  }
+
+  const friendsOf = async (u) => (await st.get("friends/" + u, { type: "json" })) || [];
+  if (p === "befriend") {
+    const f = k(body.friend);
+    if (!f || f === me || !(await st.get("users/" + f))) return j({ error: "nope" }, 404);
+    for (const [a, b] of [[me, f], [f, me]]) {
+      const l = await friendsOf(a);
+      if (!l.includes(b)) await st.setJSON("friends/" + a, [...l, b]);
+    }
+    return j({ ok: true });
+  }
+
+  if (p === "friends") {
+    const list = await Promise.all((await friendsOf(me)).map(profile));
+    return j({ friends: list.filter(Boolean) });
+  }
+
+  return j({ error: "not found" }, 404);
+};
+
+export const config = { path: "/api/*" };

@@ -1,0 +1,142 @@
+<!doctype html>
+<!-- Predictify | developed by clout -->
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0a0a0a"><meta name="author" content="clout"><title>Predictify</title>
+<meta property="og:title" content="Predictify"><meta property="og:description" content="Predict your Spotify Wrapped. Challenge your friends.">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@700;900&family=Inter:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{--g:#1ed760;--p:#ff4fb6;--v:#7b3ff2;--o:#ff7a1a;--y:#ffe14a;--b:#3d8bff}
+*{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent}
+body{background:#0a0a0a;color:#fff;font:500 16px Inter,system-ui,sans-serif;min-height:100dvh;overflow-x:hidden}
+#app{max-width:480px;margin:auto;padding:0 20px;position:relative;z-index:1}
+h1,h2,h3,.d{font-family:Unbounded,sans-serif;font-weight:900;line-height:1.02;letter-spacing:-.03em}
+.blob{position:fixed;border-radius:50%;filter:blur(70px);opacity:.5;z-index:0;animation:fl 9s ease-in-out infinite alternate}
+@keyframes fl{to{transform:translate(40px,-60px) scale(1.2)}}
+.screen{min-height:100dvh;padding:max(28px,env(safe-area-inset-top)) 0 max(48px,calc(env(safe-area-inset-bottom) + 30px));display:flex;flex-direction:column;gap:18px;animation:in .55s cubic-bezier(.2,1.3,.4,1)}
+@keyframes in{from{opacity:0;transform:translateY(34px) scale(.95)}}
+.btn{font:900 15px Unbounded,sans-serif;border:0;border-radius:99px;padding:18px 24px;background:var(--g);color:#000;cursor:pointer;transition:transform .15s;width:100%}
+.btn:active{transform:scale(.93)}.btn.w{background:#fff}.btn.k{background:#000;color:#fff}.btn.gh{background:#1c1c1c;color:#fff}
+input.t{width:100%;font:900 22px Unbounded,sans-serif;padding:18px 20px;border-radius:22px;border:3px solid #2e2e2e;background:#141414;color:#fff;outline:0}
+input.t:focus{border-color:var(--g)}
+.hint{font-size:14px;min-height:20px;color:#aaa}.hint.ok{color:var(--g)}.hint.no{color:var(--p)}
+.logo{font-size:clamp(44px,15vw,68px)}.logo span{color:var(--g);display:inline-block;animation:wob 2s ease-in-out infinite}
+@keyframes wob{50%{transform:rotate(-8deg) scale(1.12)}}
+.mq{white-space:nowrap;overflow:hidden;margin:6px -20px}.mq div{display:inline-block;animation:mq 22s linear infinite;font:900 17px Unbounded;color:#555}
+.mq b{color:var(--g);margin:0 10px}@keyframes mq{to{transform:translateX(-50%)}}
+.tile{border-radius:26px;padding:20px;color:#000;display:flex;align-items:center;gap:14px;cursor:pointer;transition:transform .15s;animation:in .5s both}
+.tile:active{transform:scale(.96)}.tile h3{font-size:19px}.tile small{font:500 14px Inter;opacity:.7}
+.av{width:46px;height:46px;border-radius:50%;background:#000;color:#fff;display:grid;place-items:center;font:900 18px Unbounded;flex:none}
+.story{position:fixed;inset:0;z-index:5;color:#000;animation:in .4s}
+.story .in{max-width:480px;margin:auto;height:100%;padding:max(18px,env(safe-area-inset-top)) 22px max(44px,calc(env(safe-area-inset-bottom) + 30px));display:flex;flex-direction:column;gap:16px}
+.bars{display:flex;gap:4px}.bars i{flex:1;height:5px;border-radius:9px;background:#0003}.bars i.on{background:#000}
+.x{align-self:flex-end;background:#0002;border:0;border-radius:50%;width:38px;height:38px;font-size:16px;cursor:pointer}
+.em{font-size:64px;animation:pop .6s cubic-bezier(.2,1.8,.4,1)}@keyframes pop{from{transform:scale(0) rotate(-40deg)}}
+.big{font-size:clamp(30px,9.5vw,46px)}.mid{flex:1;display:flex;flex-direction:column;justify-content:center;gap:18px}
+.story input.t{background:#fff;color:#000;border-color:#000}.nav{display:flex;gap:10px}.nav .btn:first-child{width:80px}
+.chips{display:flex;flex-wrap:wrap;gap:9px}.chip{font:700 15px Inter;padding:12px 16px;border-radius:99px;background:#fff;border:3px solid #000;cursor:pointer;transition:.15s}
+.chip.s{background:#000;color:#fff;transform:scale(1.08) rotate(-2deg)}
+.num{font:900 clamp(48px,16vw,76px) Unbounded;letter-spacing:-.05em}input[type=range]{width:100%;accent-color:#000;height:36px}
+.ans{font:900 clamp(38px,12vw,64px)/1 Unbounded;letter-spacing:-.04em;word-break:break-word;animation:slam .6s cubic-bezier(.2,1.6,.4,1)}
+@keyframes slam{from{opacity:0;transform:scale(2.4) rotate(6deg)}}
+.you{background:#000;color:#fff;border-radius:18px;padding:12px 16px;font-size:15px;align-self:flex-start;animation:in .8s}
+.you.match{background:#fff;color:#000;outline:3px solid #000}
+.shake{animation:sh .35s}@keyframes sh{25%{transform:translateX(-10px)}75%{transform:translateX(10px)}}
+.toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:#fff;color:#000;font:900 14px Unbounded;padding:14px 22px;border-radius:99px;z-index:20;animation:in .3s}
+canvas{position:fixed;inset:0;pointer-events:none;z-index:30;width:100%;height:100%}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px;background:#161616;border-radius:18px;padding:14px 16px}
+.row b{font:900 18px Unbounded}.sm{font-size:14px;color:#aaa}
+.wm{position:fixed;left:0;right:0;bottom:max(8px,env(safe-area-inset-bottom));text-align:center;font:700 11px Unbounded,sans-serif;letter-spacing:.06em;color:#fff;mix-blend-mode:difference;opacity:.85;z-index:50;pointer-events:none}
+</style></head><body>
+<div class="blob" style="width:300px;height:300px;background:var(--v);top:-80px;left:-100px"></div>
+<div class="blob" style="width:260px;height:260px;background:var(--p);bottom:-60px;right:-90px;animation-delay:-4s"></div>
+<div id="app"></div><div class="wm">developed by clout</div><canvas id="cf"></canvas>
+<script>
+const COL=['#1ed760','#ff4fb6','#ffe14a','#ff7a1a','#3d8bff','#b79cff','#1ed760','#ff4fb6'];
+const Q=[
+{id:'artist',e:'🎤',t:"Who's your #1 artist?",type:'text',ph:'Taylor Swift'},
+{id:'song',e:'🔥',t:"What's your #1 song?",type:'text',ph:'Song name'},
+{id:'album',e:'💿',t:"What's your top album?",type:'text',ph:'Album name'},
+{id:'genre',e:'🎧',t:'Your top genre?',type:'pick',opts:['Pop','Hip-Hop','Afrobeats','R&B','Rock','Amapiano','Gospel','Dancehall','Indie','Latin','K-Pop','Electronic']},
+{id:'minutes',e:'⏱️',t:'Minutes listened this year?',type:'num',min:2000,max:100000,step:500,def:30000,u:'min'},
+{id:'plays',e:'🔁',t:'Times you played your #1 song?',type:'num',min:10,max:1500,step:10,def:200,u:'plays'},
+{id:'age',e:'👴',t:'Your listening age?',type:'num',min:12,max:90,step:1,def:25,u:'yrs'},
+{id:'persona',e:'🪐',t:'Your listening personality?',type:'pick',opts:['Voyager','Replayer','Trailblazer','Vampire','Alchemist','Cyclops','Time Traveler','Fanclubber']}];
+const A=document.getElementById('app'),$=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const me=()=>JSON.parse(localStorage.pf_me||'null');
+const api=async(p,body,method)=>{const m=me();const r=await fetch('/api/'+p,{method:method||(body?'POST':'GET'),headers:{'content-type':'application/json',...(m?{'x-user':m.username,'x-token':m.token}:{})},body:body?JSON.stringify(body):undefined});const d=await r.json().catch(()=>({}));if(!r.ok)throw Object.assign(new Error(d.error||'fail'),{status:r.status});return d};
+const buzz=n=>navigator.vibrate&&navigator.vibrate(n||12);
+const toast=t=>{const e=document.createElement('div');e.className='toast';e.textContent=t;document.body.append(e);setTimeout(()=>e.remove(),2200)};
+const fmt=(q,v)=>q.type=='num'?Number(v).toLocaleString()+' '+q.u:v;
+const norm=s=>String(s).toLowerCase().replace(/[^a-z0-9]/g,'');
+function confetti(){const c=$('#cf'),x=c.getContext('2d');c.width=innerWidth;c.height=innerHeight;const P=Array.from({length:140},()=>({x:innerWidth/2,y:innerHeight*.6,vx:(Math.random()-.5)*16,vy:-Math.random()*18-4,s:Math.random()*9+4,c:COL[Math.random()*6|0],r:Math.random()*6}));let f=0;(function t(){x.clearRect(0,0,c.width,c.height);P.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=.5;p.r+=.2;x.fillStyle=p.c;x.save();x.translate(p.x,p.y);x.rotate(p.r);x.fillRect(-p.s/2,-p.s/2,p.s,p.s*.6);x.restore()});if(++f<110)requestAnimationFrame(t);else x.clearRect(0,0,c.width,c.height)})()}
+let S={pred:null,actual:null,friends:[]};
+const ref=new URLSearchParams(location.search).get('f');
+async function load(){const m=me();const [p,f]=await Promise.all([api('profile?u='+m.username),api('friends')]);S.pred=p.pred;S.actual=p.actual;S.friends=f.friends}
+function score(pr,ac){let t=0;Q.forEach(q=>{const a=pr?.answers?.[q.id],b=ac?.answers?.[q.id];if(a==null||b==null)return;if(q.type=='num'){t+=Math.max(0,Math.round(100*(1-2*Math.abs(a-b)/Math.max(b,1))))}else t+=norm(a)==norm(b)?100:0});return t}
+const shareUrl=()=>location.origin+'/?f='+me().username;
+async function share(){const d={title:'Predictify',text:`I predicted my Spotify Wrapped. Think you can beat me? @${me().username} (Predictify, developed by clout)`,url:shareUrl()};try{if(navigator.share)await navigator.share(d);else{await navigator.clipboard.writeText(d.url);toast('Link copied')}}catch(e){}}
+
+function landing(){let ok=false,tm;
+A.innerHTML=`<div class="screen" style="justify-content:center"><h1 class="logo">Predict<span>i</span>fy</h1>
+<div class="mq"><div>${'<b>★</b>TOP ARTIST<b>★</b>TOP SONG<b>★</b>LISTENING AGE<b>★</b>MINUTES<b>★</b>GENRE'.repeat(4)}</div></div>
+${ref?`<h2 style="font-size:22px"><span style="color:var(--g)">@${esc(ref)}</span> predicted their Wrapped. Now it's your turn.</h2>`:`<h2 style="font-size:22px">Guess your Wrapped before Spotify tells you. Then flex on your friends.</h2>`}
+<input class="t" id="u" placeholder="pick a username" maxlength="16" autocapitalize="off" autocomplete="off"><div class="hint" id="h"></div>
+<button class="btn" id="go">Let's go</button></div>`;
+$('#u').oninput=e=>{ok=false;const v=e.target.value.trim();clearTimeout(tm);const h=$('#h');if(!v){h.textContent='';return}h.className='hint';h.textContent='checking…';
+tm=setTimeout(async()=>{try{const r=await api('check?u='+encodeURIComponent(v));ok=r.available;h.className='hint '+(ok?'ok':'no');h.textContent=ok?'@'+v+' is yours if you want it':(r.reason||'taken, try another')}catch(e){h.textContent='no connection'}},350)};
+$('#go').onclick=async()=>{const v=$('#u').value.trim();if(!ok){$('#u').classList.add('shake');setTimeout(()=>$('#u').classList.remove('shake'),400);buzz(40);return}
+try{const r=await api('register',{username:v});localStorage.pf_me=JSON.stringify(r);confetti();buzz([20,40,20]);boot()}catch(e){$('#h').className='hint no';$('#h').textContent=e.status==409?'someone just took that, try another':'something broke, try again'}}}
+
+async function boot(){const m=me();if(!m)return landing();
+try{if(ref&&ref.toLowerCase()!=m.username.toLowerCase()){await api('befriend',{friend:ref}).catch(()=>{});history.replaceState(null,'','/');await load();const f=S.friends.find(x=>x.username.toLowerCase()==ref.toLowerCase());return f?view(f):home()}
+await load();home()}catch(e){if(e.status==401){localStorage.removeItem('pf_me');landing()}else A.innerHTML='<div class="screen"><h2>Can\'t connect</h2><button class="btn" onclick="boot()">Retry</button></div>'}}
+
+function home(){const m=me(),done=!!S.pred;
+const fr=S.friends.map((f,i)=>`<div class="tile" data-i="${i}" style="background:${COL[(i+2)%6]};animation-delay:${i*70}ms"><div class="av">${esc(f.username[0].toUpperCase())}</div><div style="flex:1"><h3>@${esc(f.username)}</h3><small>${f.pred?'tap to see their predictions':'still thinking…'}</small></div>${S.actual&&f.actual&&f.pred?`<b class="d">${score(f.pred,f.actual)}</b>`:'→'}</div>`).join('');
+A.innerHTML=`<div class="screen"><div class="sm">logged in as</div><h1 style="font-size:40px;margin-top:-10px">@${esc(m.username)}</h1>
+<div class="tile" id="pl" style="background:var(--g)"><div style="font-size:34px">${done?'✏️':'🔮'}</div><div style="flex:1"><h3>${done?'Edit my predictions':'Make my predictions'}</h3><small>${done?'locked in. tweak until Wrapped drops':'8 quick questions'}</small></div>→</div>
+${done?`<button class="btn w" id="sh">Share with friends</button>`:''}
+<h2 style="font-size:20px;margin-top:10px">Friends ${S.friends.length?'('+S.friends.length+')':''}</h2>${fr||'<div class="row sm">No friends yet. Share your link and they\'ll show up here when they join.</div>'}
+<div class="tile" id="rv" style="background:var(--v);color:#fff;margin-top:10px"><div style="font-size:34px">🎁</div><div style="flex:1"><h3>Wrapped is out</h3><small>${S.actual?'see the scoreboard':'enter your real results and compare'}</small></div>→</div></div>`;
+$('#pl').onclick=()=>play('pred');$('#rv').onclick=()=>S.actual?board():play('actual');if($('#sh'))$('#sh').onclick=share;
+A.querySelectorAll('[data-i]').forEach(e=>e.onclick=()=>{const f=S.friends[e.dataset.i];f.pred?view(f):toast('They haven\'t predicted yet')})}
+
+function play(mode){let i=0;const a={...((mode=='pred'?S.pred:S.actual)?.answers||{})};
+const draw=()=>{const q=Q[i],c=COL[i];let inp='';
+if(q.type=='text')inp=`<input class="t" id="in" placeholder="${q.ph}" value="${esc(a[q.id]||'')}" autocomplete="off">`;
+if(q.type=='pick')inp=`<div class="chips">${q.opts.map(o=>`<div class="chip ${a[q.id]==o?'s':''}" data-o="${o}">${o}</div>`).join('')}</div>`;
+if(q.type=='num'){const v=a[q.id]??q.def;a[q.id]=v;inp=`<div class="num" id="nv">${v.toLocaleString()}</div><div class="sm" style="color:#000a">${q.u}</div><input type="range" id="rg" min="${q.min}" max="${q.max}" step="${q.step}" value="${v}">`}
+A.innerHTML=`<div class="story" style="background:${c}"><div class="in"><div class="bars">${Q.map((_,k)=>`<i class="${k<=i?'on':''}"></i>`).join('')}</div><button class="x" id="x">✕</button>
+<div class="mid"><div class="em">${q.e}</div><div style="font-weight:700">${mode=='pred'?'Predict':'What really happened'}</div><h2 class="big">${q.t}</h2>${inp}</div>
+<div class="nav"><button class="btn w" id="bk">←</button><button class="btn k" id="nx">${i==Q.length-1?'Lock it in':'Next'}</button></div></div></div>`;
+$('#x').onclick=home;$('#bk').onclick=()=>{if(i){i--;draw()}};
+if(q.type=='text')$('#in').oninput=e=>a[q.id]=e.target.value.trim();
+if(q.type=='pick')A.querySelectorAll('.chip').forEach(e=>e.onclick=()=>{a[q.id]=e.dataset.o;buzz();A.querySelectorAll('.chip').forEach(x=>x.classList.toggle('s',x==e))});
+if(q.type=='num')$('#rg').oninput=e=>{a[q.id]=+e.target.value;$('#nv').textContent=(+e.target.value).toLocaleString();buzz(4)};
+$('#nx').onclick=async()=>{if(!a[q.id]){const t=$('.mid');t.classList.add('shake');setTimeout(()=>t.classList.remove('shake'),400);buzz(40);return}
+if(i<Q.length-1){i++;buzz();return draw()}
+$('#nx').textContent='Saving…';try{await api(mode=='pred'?'predictions':'actuals',{answers:a},'PUT');await load();confetti();buzz([30,50,30]);mode=='pred'?done():board()}catch(e){toast('Save failed, try again');$('#nx').textContent='Lock it in'}}};draw()}
+
+function done(){A.innerHTML=`<div class="screen" style="justify-content:center;text-align:center"><div class="em" style="font-size:90px">🔒</div><h1 style="font-size:40px">Locked in.</h1><div class="sm">Now send it to your friends. They'll flip through your picks.</div><button class="btn" id="sh">Share my link</button><button class="btn gh" id="hm">Back home</button></div>`;$('#sh').onclick=share;$('#hm').onclick=home}
+
+function view(f){let i=0;const N=Q.length+2,mine=S.pred?.answers||{},fa=f.pred.answers;
+let twin=0;Q.forEach(q=>{if(mine[q.id]==null)return;twin+=q.type=='num'?(Math.abs(mine[q.id]-fa[q.id])/fa[q.id]<.15?1:0):(norm(mine[q.id])==norm(fa[q.id])?1:0)});
+const draw=()=>{let c=COL[i%8],body;
+if(i==0)body=`<div class="mid"><div class="em">👀</div><div style="font-weight:700">Wrapped prediction by</div><h2 class="big">@${esc(f.username)}</h2><div>Tap to see what they think they'll get.</div></div>`;
+else if(i<=Q.length){const q=Q[i-1],v=fa[q.id],y=mine[q.id],m=y!=null&&(q.type=='num'?Math.abs(y-v)/v<.15:norm(y)==norm(v));
+body=`<div class="mid"><div class="em">${q.e}</div><div style="font-weight:700">${q.t}</div><div class="ans">${esc(fmt(q,v))}</div>${y!=null?`<div class="you ${m?'match':''}">${m?'You picked the same. Twins.':'You said '+esc(fmt(q,y))}</div>`:''}</div>`}
+else body=`<div class="mid"><div class="em">${twin>=5?'👯':twin>=3?'🤝':'⚔️'}</div><h2 class="big">${S.pred?`${twin}/${Q.length} matches`:'Your turn'}</h2><div>${S.pred?(twin>=5?'You two are basically the same person.':twin>=3?'Good taste overlap.':'Wildly different. Wrapped day will be fun.'):'Make your own predictions so you can face off.'}</div></div>`;
+A.innerHTML=`<div class="story" style="background:${c}"><div class="in"><div class="bars">${Array.from({length:N},(_,k)=>`<i class="${k<=i?'on':''}"></i>`).join('')}</div><button class="x" id="x">✕</button>${body}<div class="nav"><button class="btn w" id="bk">←</button><button class="btn k" id="nx">${i==N-1?(S.pred?'Back home':'Make mine'):'Next'}</button></div></div></div>`;
+$('#x').onclick=home;$('#bk').onclick=()=>{if(i){i--;draw()}};
+$('#nx').onclick=()=>{if(i<N-1){i++;buzz();draw()}else{i==N-1&&twin>=5&&confetti();S.pred?home():play('pred')}};if(i==N-1&&twin>=5)confetti()};draw()}
+
+function board(){const m=me();const all=[{u:m.username,p:S.pred,a:S.actual,me:1},...S.friends.map(f=>({u:f.username,p:f.pred,a:f.actual}))].filter(x=>x.p&&x.a).map(x=>({...x,s:score(x.p,x.a)})).sort((a,b)=>b.s-a.s);
+A.innerHTML=`<div class="screen"><h1 style="font-size:36px">Scoreboard 🏆</h1><div class="sm">100 points per question. Numbers score by how close you were.</div>
+${all.map((x,i)=>`<div class="tile" style="background:${i?'#161616':'var(--g)'};color:${i?'#fff':'#000'};animation-delay:${i*90}ms"><b class="d" style="font-size:26px">${['🥇','🥈','🥉'][i]||i+1}</b><div style="flex:1"><h3>@${esc(x.u)}${x.me?' (you)':''}</h3></div><b class="d">${x.s}</b></div>`).join('')||'<div class="row sm">Nobody has entered their real results yet.</div>'}
+<button class="btn w" id="re">Redo my real results</button><button class="btn gh" id="hm">Back home</button></div>`;
+if(all[0]?.me)confetti();$('#re').onclick=()=>play('actual');$('#hm').onclick=home}
+console.log("%cPredictify | developed by clout","font:900 16px sans-serif;color:#1ed760");
+boot();
+</script></body></html>
