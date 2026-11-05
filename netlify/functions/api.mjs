@@ -5,7 +5,7 @@ const k = (u) => String(u || "").trim().toLowerCase();
 const valid = (u) => /^[A-Za-z0-9_.]{3,16}$/.test(String(u || ""));
 const sha = async (t) => [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(t)))].map((x) => x.toString(16).padStart(2, "0")).join("");
 
-export default async (req) => {
+const handler = async (req) => {
   const st = getStore("predictify");
   const url = new URL(req.url);
   const p = url.pathname.replace(/^\/api\//, "");
@@ -19,9 +19,13 @@ export default async (req) => {
 
   if (p === "register") {
     if (!valid(body.username)) return j({ error: "invalid" }, 400);
+    const key = "users/" + k(body.username);
+    if (await st.get(key)) return j({ error: "taken" }, 409);
     const token = crypto.randomUUID();
-    const r = await st.setJSON("users/" + k(body.username), { name: body.username.trim(), h: await sha(token) }, { onlyIfNew: true });
-    if (!r.modified) return j({ error: "taken" }, 409);
+    const h = await sha(token);
+    await st.setJSON(key, { name: body.username.trim(), h }, { onlyIfNew: true });
+    const saved = await st.get(key, { type: "json" });
+    if (!saved || saved.h !== h) return j({ error: "taken" }, 409);
     return j({ username: body.username.trim(), token });
   }
 
@@ -65,6 +69,14 @@ export default async (req) => {
   }
 
   return j({ error: "not found" }, 404);
+};
+
+export default async (req) => {
+  try {
+    return await handler(req);
+  } catch (e) {
+    return j({ error: String((e && e.message) || e) }, 500);
+  }
 };
 
 export const config = { path: "/api/*" };
