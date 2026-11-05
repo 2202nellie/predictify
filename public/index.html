@@ -78,29 +78,36 @@ function score(pr,ac){let t=0;Q.forEach(q=>{const a=pr?.answers?.[q.id],b=ac?.an
 const shareUrl=()=>location.origin+'/?f='+me().username;
 async function share(){const d={title:'Predictify',text:`I predicted my Spotify Wrapped. Think you can beat me? @${me().username} (Predictify, developed by clout)`,url:shareUrl()};try{if(navigator.share)await navigator.share(d);else{await navigator.clipboard.writeText(d.url);toast('Link copied')}}catch(e){}}
 
-function landing(){let ok=false,tm;
+function landing(){let st=null,tm,nm='';
 A.innerHTML=`<div class="screen" style="justify-content:center"><h1 class="logo">Predict<span>i</span>fy</h1>
 <div class="mq"><div>${'<b>★</b>TOP ARTIST<b>★</b>TOP SONG<b>★</b>LISTENING AGE<b>★</b>MINUTES<b>★</b>GENRE'.repeat(4)}</div></div>
 ${ref?`<h2 style="font-size:22px"><span style="color:var(--g)">@${esc(ref)}</span> predicted their Wrapped. Now it's your turn.</h2>`:`<h2 style="font-size:22px">Guess your Wrapped before Spotify tells you. Then flex on your friends.</h2>`}
-<input class="t" id="u" placeholder="pick a username" maxlength="16" autocapitalize="off" autocomplete="off"><div class="hint" id="h"></div>
+<input class="t" id="u" placeholder="your username" maxlength="16" autocapitalize="off" autocomplete="off"><div class="hint" id="h"></div>
+<input class="t" id="p" type="password" placeholder="secret PIN (4+ characters)" maxlength="12" autocomplete="off" style="display:none">
 <button class="btn" id="go">Let's go</button></div>`;
-$('#u').oninput=e=>{ok=false;const v=e.target.value.trim();clearTimeout(tm);const h=$('#h');if(!v){h.textContent='';return}h.className='hint';h.textContent='checking…';
-tm=setTimeout(async()=>{try{const r=await api('check?u='+encodeURIComponent(v));ok=r.available;h.className='hint '+(ok?'ok':'no');h.textContent=ok?'@'+v+' is yours if you want it':(r.reason||'taken, try another')}catch(e){h.textContent='no connection'}},350)};
-$('#go').onclick=async()=>{const v=$('#u').value.trim();if(!ok){$('#u').classList.add('shake');setTimeout(()=>$('#u').classList.remove('shake'),400);buzz(40);return}
-try{const r=await api('register',{username:v});localStorage.pf_me=JSON.stringify(r);confetti();buzz([20,40,20]);boot()}catch(e){$('#h').className='hint no';$('#h').textContent=e.status==409?'someone just took that, try another':'something broke: '+e.message}}}
+const h=$('#h'),pw=$('#p'),say=(t,c)=>{h.className='hint '+(c||'');h.textContent=t};
+$('#u').oninput=e=>{st=null;pw.style.display='none';nm=e.target.value.trim();clearTimeout(tm);if(!nm){say('');return}say('checking…');
+tm=setTimeout(async()=>{try{const r=await api('check?u='+encodeURIComponent(nm));
+if(r.available){st='new';pw.style.display='';say('@'+nm+' is free. Set a PIN to claim it. You\'ll need it to log back in.','ok')}
+else if(r.exists){st=r.hasPin?'back':'claim';pw.style.display='';say(r.hasPin?'Welcome back @'+nm+'. Enter your PIN to continue.':'@'+nm+' has no PIN yet. If it\'s yours, set a PIN to claim it.','ok')}
+else say(r.reason||'try another','no')}catch(e){say('no connection','no')}},350)};
+$('#go').onclick=async()=>{const pin=pw.value;const bad=el=>{el.classList.add('shake');setTimeout(()=>el.classList.remove('shake'),400);buzz(40)};
+if(!st)return bad($('#u'));if(pin.length<4){say('PIN needs at least 4 characters','no');return bad(pw)}
+try{const r=await api(st=='new'?'register':'login',{username:nm,pin});localStorage.pf_me=JSON.stringify(r);confetti();buzz([20,40,20]);boot(true)}
+catch(e){say(e.status==401?'Wrong PIN. Try again.':e.status==409?'Someone just took that, try another':'something broke: '+e.message,'no');bad(pw)}}}
 
-async function boot(){const m=me();if(!m)return landing();
+async function boot(fresh){const m=me();if(!m)return landing();
 try{if(ref&&ref.toLowerCase()!=m.username.toLowerCase()){await api('befriend',{friend:ref}).catch(()=>{});history.replaceState(null,'','/');await load();const f=S.friends.find(x=>x.username.toLowerCase()==ref.toLowerCase());return f?view(f):home()}
-await load();home()}catch(e){if(e.status==401){localStorage.removeItem('pf_me');landing()}else A.innerHTML='<div class="screen"><h2>Can\'t connect</h2><button class="btn" onclick="boot()">Retry</button></div>'}}
+await load();fresh&&!S.pred?play('pred'):home()}catch(e){if(e.status==401){localStorage.removeItem('pf_me');landing()}else A.innerHTML='<div class="screen"><h2>Can\'t connect</h2><button class="btn" onclick="boot()">Retry</button></div>'}}
 
 function home(){const m=me(),done=!!S.pred;
 const fr=S.friends.map((f,i)=>`<div class="tile" data-i="${i}" style="background:${COL[(i+2)%6]};animation-delay:${i*70}ms"><div class="av">${esc(f.username[0].toUpperCase())}</div><div style="flex:1"><h3>@${esc(f.username)}</h3><small>${f.pred?'tap to see their predictions':'still thinking…'}</small></div>${S.actual&&f.actual&&f.pred?`<b class="d">${score(f.pred,f.actual)}</b>`:'→'}</div>`).join('');
 A.innerHTML=`<div class="screen"><div class="sm">logged in as</div><h1 style="font-size:40px;margin-top:-10px">@${esc(m.username)}</h1>
 <div class="tile" id="pl" style="background:var(--g)"><div style="font-size:34px">${done?'✏️':'🔮'}</div><div style="flex:1"><h3>${done?'Edit my predictions':'Make my predictions'}</h3><small>${done?'locked in. tweak until Wrapped drops':'8 quick questions'}</small></div>→</div>
-${done?`<button class="btn w" id="sh">Share with friends</button>`:''}
+${done?`<button class="btn w" id="sh">Share with friends</button><h2 style="font-size:20px;margin-top:6px">My picks</h2>${Q.map(q=>`<div class="row"><span class="sm">${q.e} ${q.t}</span><b style="font-size:15px;text-align:right">${esc(fmt(q,S.pred.answers[q.id]))}</b></div>`).join('')}`:`<div class="row sm">You haven't picked your predictions yet. Tap the green card to start.</div>`}
 <h2 style="font-size:20px;margin-top:10px">Friends ${S.friends.length?'('+S.friends.length+')':''}</h2>${fr||'<div class="row sm">No friends yet. Share your link and they\'ll show up here when they join.</div>'}
 <div class="tile" id="rv" style="background:var(--v);color:#fff;margin-top:10px"><div style="font-size:34px">🎁</div><div style="flex:1"><h3>Wrapped is out</h3><small>${S.actual?'see the scoreboard':'enter your real results and compare'}</small></div>→</div></div>`;
-$('#pl').onclick=()=>play('pred');$('#rv').onclick=()=>S.actual?board():play('actual');if($('#sh'))$('#sh').onclick=share;
+$('.screen').insertAdjacentHTML('beforeend','<button class="btn gh" id="lo">Switch account</button>');$('#lo').onclick=()=>{localStorage.removeItem('pf_me');landing()};$('#pl').onclick=()=>play('pred');$('#rv').onclick=()=>S.actual?board():play('actual');if($('#sh'))$('#sh').onclick=share;
 A.querySelectorAll('[data-i]').forEach(e=>e.onclick=()=>{const f=S.friends[e.dataset.i];f.pred?view(f):toast('They haven\'t predicted yet')})}
 
 function play(mode){let i=0;const a={...((mode=='pred'?S.pred:S.actual)?.answers||{})};
