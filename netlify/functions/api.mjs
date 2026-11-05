@@ -28,7 +28,8 @@ const handler = async (req) => {
     const ph = await pinHash(body.pin, body.username);
     await st.setJSON(key, { name: body.username.trim(), ph }, { onlyIfNew: true });
     const saved = await st.get(key, { type: "json" });
-    if (!saved || saved.ph !== ph) return j({ error: "taken" }, 409);
+    if (saved && saved.ph !== ph) return j({ error: "taken" }, 409);
+    if (!saved) return j({ error: "pending" }, 503);
     return j({ username: saved.name, token: body.pin });
   }
 
